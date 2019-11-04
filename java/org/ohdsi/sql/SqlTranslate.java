@@ -483,29 +483,33 @@ public class SqlTranslate {
 			if (targetToReplacementPatterns == null) { // Could have been loaded before acquiring the lock
 				try {
 					InputStream inputStream;
-					if (pathToReplacementPatterns == null) // Use CSV file in JAR
+					if (pathToReplacementPatterns == null) {
 						inputStream = SqlTranslate.class.getResourceAsStream("/inst/csv/replacementPatterns.csv");
-					else
-						inputStream = new FileInputStream(pathToReplacementPatterns);
-					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
-					targetToReplacementPatterns = new HashMap<String, List<String[]>>();
-					String line;
-					boolean first = true;
-					while ((line = bufferedReader.readLine()) != null) {
-						if (first) { // Skip first line
-							first = false;
-							continue;
-						}
-						List<String> row = line2columns(line);
-						String target = row.get(0);
-						List<String[]> replacementPatterns = targetToReplacementPatterns.get(target);
-						if (replacementPatterns == null) {
-							replacementPatterns = new ArrayList<String[]>();
-							targetToReplacementPatterns.put(target, replacementPatterns);
-						}
-						replacementPatterns.add(new String[] { row.get(1).replaceAll("@", "@@"), row.get(2).replaceAll("@", "@@") });
 					}
-				} catch (UnsupportedEncodingException e) {
+					else {
+						inputStream = SqlTranslate.class.getResourceAsStream(pathToReplacementPatterns);
+					}
+					final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+					SqlTranslate.targetToReplacementPatterns = new HashMap<String, List<String[]>>();
+					boolean first = true;
+					String line;
+					while ((line = bufferedReader.readLine()) != null) {
+						if (first) {
+							first = false;
+						}
+						else {
+							final List<String> row = line2columns(line);
+							final String target = row.get(0);
+							List<String[]> replacementPatterns = SqlTranslate.targetToReplacementPatterns.get(target);
+							if (replacementPatterns == null) {
+								replacementPatterns = new ArrayList<String[]>();
+								SqlTranslate.targetToReplacementPatterns.put(target, replacementPatterns);
+							}
+							replacementPatterns.add(new String[] { row.get(1).replaceAll("@", "@@"), row.get(2).replaceAll("@", "@@") });
+						}
+					}
+				}
+				catch (UnsupportedEncodingException e) {
 					System.err.println("Computer does not support UTF-8 encoding");
 					e.printStackTrace();
 				} catch (IOException e) {
