@@ -713,3 +713,45 @@ sqlite,UPDATE STATISTICS @a;,ANALYZE @a;
 sqlite,TRUNCATE TABLE @a;,DELETE FROM @a;
 sqlite,"CONCAT(@a, @b, @c)","CONCAT(@a, CONCAT(@b, @c))"
 sqlite,"CONCAT(@a, @b)","@a || @b"
+hana,"DATEADD(second,@seconds,@datetime)","ADD_SECONDS(TO_TIMESTAMP(@datetime),@seconds)"
+hana,"DATEADD(minute,@minutes,@datetime)","ADD_SECONDS(TO_TIMESTAMP(@datetime),@minutes*60)"
+hana,"DATEADD(hour,@hours,@datetime)","ADD_SECONDS(TO_TIMESTAMP(@datetime),@hours*60*60)"
+hana,"DATEADD(d,@days,@date)","ADD_DAYS(TO_DATE(@date),@days)"
+hana,"DATEADD(dd,@days,@date)","ADD_DAYS(TO_DATE(@date),@days)"
+hana,"DATEADD(day,@days,@date)","ADD_DAYS(TO_DATE(@date),@days)"
+hana,"DATEADD(month,@months,@date)","ADD_MONTHS(@date, @months)"
+hana,"DATEADD(mm,@months,@date)","ADD_MONTHS(@date, @months)"
+hana,"DATEADD(m,@months,@date)","ADD_MONTHS(@date, @months)"
+hana,"DATEADD(year,@years,@date)","ADD_YEARS(@date, @years)"
+hana,"DATEADD(yyyy,@years,@date)","ADD_YEARS(@date, @years)"
+hana,"DATEADD(yy,@years,@date)","ADD_YEARS(@date, @years)"
+hana,"DATEDIFF(d,@start,@end)","DAYS_BETWEEN(@start,@end)"
+hana,"DATEDIFF(dd,@start,@end)","DAYS_BETWEEN(@start,@end)"
+hana,"DATEDIFF(day,@start,@end)","DAYS_BETWEEN(@start,@end)"
+hana,"DATEFROMPARTS(@year,@month,@day)","TO_DATE(@year || '-' || @month || '-' || @day, 'YYYY-MM-DD')"
+hana,STDEV(@a),STDDEV(@a)
+hana,"ISNULL(@a,@b)","IFNULL(@a,@b)"
+hana,"COUNT_BIG(@a)","COUNT(@a)"
+hana,"COALESCE(@a,@b)","IFNULL(@a,@b)"
+hana,SELECT @a AS @b), SELECT @a AS @b FROM DUMMY)
+hana,SELECT @a UNION,SELECT @a FROM DUMMY UNION
+hana,FROM DUMMY FROM DUMMY, <dummy> FROM DUMMY
+hana,FROM @a UNION @b FROM DUMMY UNION,FROM @a UNION @b FROM DUMMY FROM DUMMY UNION
+hana,FROM @a FROM DUMMY UNION,FROM @a UNION
+hana,FROM @a UNION @b FROM DUAL;,FROM @a UNION @b FROM DUAL FROM DUAL;
+hana,FROM @a FROM DUAL;,FROM @a;
+hana,FROM @a UNION @b FROM DUMMY WHERE,FROM @a UNION @b FROM DUMMY FROM DUMMY WHERE
+hana,FROM @a FROM DUMMY WHERE,FROM @a WHERE
+hana,FROM @a UNION @b FROM DUMMY),FROM @a UNION @b FROM DUMMY FROM DUMMY)
+hana,FROM @b FROM DUMMY),FROM @b)
+hana,<dummy>,
+hana,"IF OBJECT_ID('tempdb..#@table', 'U') IS NOT NULL DROP TABLE #@table;",
+hana,CREATE TABLE #@table (@definition);,CREATE LOCAL TEMPORARY TABLE #@table (@definition);
+hana,WITH @a AS @b SELECT @c INTO #@d FROM @e;,CREATE LOCAL TEMPORARY TABLE #@d\nAS(\nWITH @a AS @b SELECT\n@c\nFROM\n@e);
+hana,WITH @a AS @b SELECT @c INTO @d FROM @e;,CREATE TABLE @d\nAS(\nWITH @a AS @b SELECT\n@c\nFROM\n@e);
+hana,SELECT @a INTO #@b FROM @c;,CREATE LOCAL TEMPORARY TABLE #@b AS(\nSELECT\n@a\nFROM\n@c);
+hana,SELECT @a INTO @b FROM @c;,CREATE TABLE @b AS(\nSELECT\n@a\nFROM\n@c);
+hana,SELECT @a INTO @b;,CREATE TABLE @b AS\nSELECT\n@a;
+hana,#,<hash><hash>
+hana,<hash><hash>,%temp_prefix%#
+hana,CREATE INDEX @a ON @schema.#@b (@variable);,

@@ -146,7 +146,7 @@ translate <- function(sql = "",
   for (message in messages) {
     warning(message)
   }
-  translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSqlWithPath(sql, targetDialect, rJava::.jnull(), oracleTempSchema, pathToReplacementPatterns)
+  translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSql(sql, "sql server", targetDialect, rJava::.jnull(), oracleTempSchema)
   return(translatedSql)
 }
 
