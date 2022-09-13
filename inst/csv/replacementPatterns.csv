@@ -755,3 +755,5 @@ hana,SELECT @a INTO @b;,CREATE TABLE @b AS\nSELECT\n@a;
 hana,#,<hash><hash>
 hana,<hash><hash>,%temp_prefix%#
 hana,CREATE INDEX @a ON @schema.#@b (@variable);,
+hana,"ISNUMERIC(@a)","CASE WHEN (CAST(@a AS VARCHAR) LIKE_REGEXPR '^([0-9]+\.?[0-9]*|\.[0-9]+)$') THEN 1 ELSE 0 END"
+hana,GETDATE(),CURRENT_DATE
