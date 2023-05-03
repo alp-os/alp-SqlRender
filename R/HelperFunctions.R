@@ -168,7 +168,7 @@ loadRenderTranslateSql <- function(sqlFilename,
                                    packageName,
                                    dbms = "sql server",
                                    ...,
-                                   oracleTempSchema = NULL,
+                                   tempEmulationSchema = NULL,
                                    warnOnMissingParameters = TRUE) {
   pathToSql <- system.file(paste("sql/", gsub(" ", "_", dbms), sep = ""),
                            sqlFilename,
@@ -185,7 +185,7 @@ loadRenderTranslateSql <- function(sqlFilename,
   renderedSql <- render(sql = parameterizedSql[1], warnOnMissingParameters = warnOnMissingParameters, ...)
   
   if (mustTranslate)
-    renderedSql <- translate(sql = renderedSql, targetDialect = dbms, oracleTempSchema = oracleTempSchema)
+    renderedSql <- translate(sql = renderedSql, targetDialect = dbms, tempEmulationSchema = tempEmulationSchema)
   
   renderedSql
 }

@@ -128,7 +128,7 @@ renderSql <- function(sql = "", warnOnMissingParameters = TRUE, ...) {
 #' @param sql                The SQL to be translated
 #' @param targetDialect      The target dialect. Currently "oracle", "postgresql", "pdw", "impala", "netezza", "bigquery", and
 #'                           "redshift" are supported
-#' @param oracleTempSchema   A schema that can be used to create temp tables in when using Oracle or Impala.
+#' @param tempEmulationSchema   A schema that can be used to create temp tables in when using Oracle or Impala.
 #' @return
 #' A character string containing the translated SQL.
 #' 
@@ -138,15 +138,15 @@ renderSql <- function(sql = "", warnOnMissingParameters = TRUE, ...) {
 #' @export
 translate <- function(sql = "",
                       targetDialect,
-                      oracleTempSchema = NULL) {
+                      tempEmulationSchema = NULL) {
   pathToReplacementPatterns <- system.file("csv", "replacementPatterns.csv", package = "SqlRender")
-  if (missing(oracleTempSchema) || is.null(oracleTempSchema))
-    oracleTempSchema <- rJava::.jnull()
+  if (missing(tempEmulationSchema) || is.null(tempEmulationSchema))
+    tempEmulationSchema <- rJava::.jnull()
   messages <- rJava::J("org.ohdsi.sql.SqlTranslate")$check(sql, targetDialect)
   for (message in messages) {
     warning(message)
   }
-  translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSql(sql, "sql server", targetDialect, rJava::.jnull(), oracleTempSchema)
+  translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSql(sql, "sql server", targetDialect, rJava::.jnull(), tempEmulationSchema)
   return(translatedSql)
 }
 
