@@ -735,6 +735,7 @@ hana,"COUNT_BIG(@a)","COUNT(@a)"
 hana,"COALESCE(@a,@b)","IFNULL(@a,@b)"
 hana,SELECT @a AS @b), SELECT @a AS @b FROM DUMMY)
 hana,SELECT @a UNION,SELECT @a FROM DUMMY UNION
+hana,AS (SELECT @a FROM DUMMY UNION select @b),AS (SELECT @a FROM DUMMY UNION SELECT @b FROM DUMMY)
 hana,FROM DUMMY FROM DUMMY, <dummy> FROM DUMMY
 hana,FROM @a UNION @b FROM DUMMY UNION,FROM @a UNION @b FROM DUMMY FROM DUMMY UNION
 hana,FROM @a FROM DUMMY UNION,FROM @a UNION
@@ -757,3 +758,7 @@ hana,<hash><hash>,%temp_prefix%#
 hana,CREATE INDEX @a ON @schema.#@b (@variable);,
 hana,"ISNUMERIC(@a)","CASE WHEN (CAST(@a AS VARCHAR) LIKE_REGEXPR '^([0-9]+\.?[0-9]*|\.[0-9]+)$') THEN 1 ELSE 0 END"
 hana,GETDATE(),CURRENT_DATE
+hana,<dummy>,
+hana,"CONCAT(@a, @b, @c)","CONCAT(@a, CONCAT(@b, @c))"
+hana,"CONCAT(@a, @b)","@a || @b"
+hana,EOMONTH(@date),LAST_DAY(@date)
