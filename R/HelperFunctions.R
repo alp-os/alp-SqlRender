@@ -217,6 +217,7 @@ loadRenderTranslateSql <- function(sqlFilename,
                                    dbms = "sql server",
                                    ...,
                                    tempEmulationSchema = NULL,
+                                   oracleTempSchema = NULL,
                                    warnOnMissingParameters = TRUE) {
   errorMessages <- checkmate::makeAssertCollection()
   checkmate::assertCharacter(sqlFilename, len = 1, add = errorMessages)
