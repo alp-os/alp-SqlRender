@@ -1,10 +1,12 @@
-This update has 5 changes, and 4 bug fixes since 1.6.2 (see NEWS.md)
+There is 1 changes and 2 bugfixes (see NEWS.md), and modifies the System Requirements Java notation as requested by Prof. Ripley. 
 
 ---
 
 ## Test environments
-* Ubuntu 14.04.5 LTS (Travis), R 3.6.0
-* Windows 7, R 3.6.0
+* Ubuntu 20.03, R 4.2.3
+* Microsoft Windows Server 2019, R 4.2.3
+* MacOS, R 4.2.3
+* Windows 10, R 4.2.3
 
 ## R CMD check results
 
@@ -12,4 +14,4 @@ There were no ERRORs or WARNINGs.
 
 ## Downstream dependencies
 
-- DatabaseConnector depends on SqlRender, and has been tested with this new version. No problems were found.
+- DatabaseConnector and CDMConnector depend on SqlRender, and has been tested with this new version. No problems were found.

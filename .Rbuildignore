@@ -19,3 +19,6 @@ target/
 docs
 compare_versions
 _pkgdown.yml
+^CRAN-RELEASE$
+.github
+^CRAN-SUBMISSION$

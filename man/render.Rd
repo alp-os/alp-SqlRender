@@ -4,13 +4,14 @@
 \alias{render}
 \title{Render SQL code based on parameterized SQL and parameter values}
 \usage{
-render(sql = "", warnOnMissingParameters = TRUE, ...)
+render(sql, warnOnMissingParameters = TRUE, ...)
 }
 \arguments{
 \item{sql}{The parameterized SQL}
 
-\item{warnOnMissingParameters}{Should a warning be raised when parameters provided to this function 
-do not appear in the parameterized SQL that is being rendered? By default, this is TRUE.}
+\item{warnOnMissingParameters}{Should a warning be raised when parameters provided to this
+function do not appear in the parameterized SQL that is being
+rendered? By default, this is TRUE.}
 
 \item{...}{Parameter values}
 }
@@ -23,10 +24,10 @@ A character string containing the rendered SQL.
 \details{
 This function takes parameterized SQL and a list of parameter values and renders the SQL that can
 be send to the server. Parameterization syntax: \describe{ \item{@parameterName}{Parameters are
-indicated using a @ prefix, and are replaced with the actual values provided in the render
-call.} \item{\{DEFAULT @parameterName = parameterValue\}}{Default values for parameters can be
-defined using curly and the DEFAULT keyword.} \item{\{if\}?\{then\}:\{else\}}{The if-then-else
-pattern is used to turn on or off blocks of SQL code.} }
+indicated using a @ prefix, and are replaced with the actual values provided in the render call.}
+\item{\{DEFAULT @parameterName = parameterValue\}}{Default values for parameters can be defined
+using curly and the DEFAULT keyword.} \item{\{if\}?\{then\}:\{else\}}{The if-then-else pattern is
+used to turn on or off blocks of SQL code.} }
 }
 \examples{
 render("SELECT * FROM @a;", a = "myTable")
@@ -34,16 +35,21 @@ render("SELECT * FROM @a {@b}?{WHERE x = 1};", a = "myTable", b = "true")
 render("SELECT * FROM @a {@b == ''}?{WHERE x = 1}:{ORDER BY x};", a = "myTable", b = "true")
 render("SELECT * FROM @a {@b != ''}?{WHERE @b = 1};", a = "myTable", b = "y")
 render("SELECT * FROM @a {1 IN (@c)}?{WHERE @b = 1};",
-       a = "myTable",
-       b = "y",
-       c = c(1, 2, 3, 4))
-render("{DEFAULT @b = \\"someField\\"}SELECT * FROM @a {@b != ''}?{WHERE @b = 1};",
-       a = "myTable")
+  a = "myTable",
+  b = "y",
+  c = c(1, 2, 3, 4)
+)
+render("{DEFAULT @b = \"someField\"}SELECT * FROM @a {@b != ''}?{WHERE @b = 1};",
+  a = "myTable"
+)
 render("SELECT * FROM @a {@a == 'myTable' & @b != 'x'}?{WHERE @b = 1};",
-       a = "myTable",
-       b = "y")
-render(sql = "SELECT * FROM @a;", 
-       warnOnMissingParameters = FALSE, 
-       a = "myTable", 
-       b = "missingParameter")
+  a = "myTable",
+  b = "y"
+)
+render(
+  sql = "SELECT * FROM @a;",
+  warnOnMissingParameters = FALSE,
+  a = "myTable",
+  b = "missingParameter"
+)
 }
