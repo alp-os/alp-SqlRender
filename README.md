@@ -12,13 +12,13 @@ SqlRender is part of [HADES](https://ohdsi.github.io/Hades/).
 ```
 mvn package # creating jar
 
-cp target/SqlRender-1.6.3-SNAPSHOT.jar inst/java/
-cp inst/java/SqlRender-1.6.3-SNAPSHOT.jar inst/java/SqlRender.jar
+cp target/SqlRender-1.15.0-SNAPSHOT.jar inst/java/
+cp inst/java/SqlRender-1.15.0-SNAPSHOT.jar inst/java/SqlRender.jar
 
-R CMD build . # create R package
+R CMD build . --no-build-vignettes # create R package
 
 # (Optional) To install built package in R
-R -e 'install.packages(pkgs="./SqlRender_1.6.3.tar.gz", repos=NULL)'
+R -e 'install.packages(pkgs="./SqlRender_1.15.0.tar.gz", repos=NULL)'
 ```
 
 # Introduction
