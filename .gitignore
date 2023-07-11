@@ -11,3 +11,5 @@ standalone/build/*
 /target
 .idea
 *.iml
+errorReportSql.txt
+.DS_Store

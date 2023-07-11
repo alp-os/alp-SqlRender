@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright 2019 Observational Health Data Sciences and Informatics
+ * Copyright 2023 Observational Health Data Sciences and Informatics
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,12 +15,13 @@
  ******************************************************************************/
 package org.ohdsi.sql;
 
-import java.util.List;
-
 import org.ohdsi.sql.SqlTranslate.Block;
 import org.ohdsi.sql.SqlTranslate.MatchedPattern;
 
-public class BigQueryTranslate {
+import java.sql.*;
+import java.util.*;
+
+public class BigQuerySparkTranslate {
 
 	/**
 	 * Iterates the elements of a comma-separated list of expressions (SELECT, GROUP BY, or ORDER BY).
@@ -253,12 +254,18 @@ public class BigQueryTranslate {
 					.replace("@@a", cte_match.variableToValue.get("@@a"))
 					.replace("(@@b)", "")
 					.replace("@@c", replacement_select_list)
-					.replace("@@d", cte_match.variableToValue.get("@@d"))
+					.replace("@@d", nullToEmptyString(cte_match.variableToValue.get("@@d")))
 				+ sql.substring(cte_match.end);
 		}
 		return sql;
 	}
 
+	private static String nullToEmptyString(String string) {
+	  if (string == null)
+		  return "";
+	  else
+		  return string;
+	}
 	/**
 	 * Finds complex expressions in a GROUP BY or ORDER BY list and replaces them with references to matching select list expressions.
 	 *
@@ -360,6 +367,7 @@ public class BigQueryTranslate {
 		sql = bigQueryLowerCase(sql);
 		sql = bigQueryAliasCommonTableExpressions(sql, "with @@a (@@b) as (select @@c from @@d)");
 		sql = bigQueryAliasCommonTableExpressions(sql, "with @@a (@@b) as (select @@c union @@d)");
+		sql = bigQueryAliasCommonTableExpressions(sql, "with @@a (@@b) as (select @@c)");
 		sql = bigQueryAliasCommonTableExpressions(sql, ", @@a (@@b) as (select @@c from @@d)");
 
 		String groupByReferences = "select @@s from @@b group by @@r";
@@ -372,6 +380,252 @@ public class BigQueryTranslate {
 		sql = bigQueryConvertSelectListReferences(sql, orderBy + ";", CommaListIterator.ListType.ORDER_BY);
 		sql = bigQueryConvertSelectListReferences(sql, orderBy + ")", CommaListIterator.ListType.ORDER_BY);
 
+		return sql;
+	}
+
+	// Spark functions -------
+
+	private static List<String> getMetaFields(String target_table_name, Connection connection) throws SQLException {
+
+		Statement statement = connection.createStatement();
+		ResultSet rs = statement.executeQuery("show columns in " + target_table_name);
+
+		List<String> metaFields = new ArrayList<String>();
+		while (rs.next()) {
+			metaFields.add(rs.getString("COL_NAME").toLowerCase());
+		}
+
+		return metaFields;
+	}
+
+	private static String sparkCreateTable(String sql) {
+		if (!sql.endsWith(";")) {
+			sql += ";";
+		}
+
+		String pattern = "CREATE TABLE @@table (@@definition)";
+
+		List<Block> create_table_pattern = SqlTranslate.parseSearchPattern(pattern);
+
+		sql = sql.trim().replaceAll("\t", " ").replaceAll(" +", " ");
+
+		MatchedPattern create_table_match = SqlTranslate.search(sql, create_table_pattern, 0);
+
+		String table_name = create_table_match.variableToValue.get("@@table");
+		String definition_list = create_table_match.variableToValue.get("@@definition");
+
+		if (table_name != null && definition_list != null) {
+
+			table_name = table_name.replaceAll("\r\n", "");
+			definition_list = definition_list.toLowerCase().replaceAll("\r\n", "").replaceAll(" as ", " ");
+
+			List<String> column_names = new ArrayList<String>();
+			for (String f : definition_list.split(",")) {
+				column_names.add("\tCAST(NULL AS " + f.trim().split(" ")[1] + ") AS " + f.trim().split(" ")[0]);
+			}
+
+			String prefix = sql.substring(0, create_table_match.start);
+
+			sql = prefix
+					+ "SELECT "
+					+ String.join(",\r\n", column_names) + " INTO "
+					+ table_name + " WHERE 1 = 0";
+		}
+
+		return sql.replaceAll(";", "");
+	}
+
+		private static String sparkInsertGetValueMappings(MatchedPattern insert_match, List<String> metaFields) {
+			CommaListIterator insert_list_iter = new CommaListIterator(insert_match.variableToValue.get("@@columns"), CommaListIterator.ListType.WITH_COLUMNS);
+			CommaListIterator select_list_iter = new CommaListIterator(insert_match.variableToValue.get("@@remainder"), CommaListIterator.ListType.SELECT);
+
+			Map<String, String> mappings = new HashMap<String, String>();
+
+			// Iterates the insert column list and the SELECT list in parallel
+			while (!insert_list_iter.IsDone()) {
+				if (select_list_iter.IsDone()) {
+					break;
+				}
+				final String column_expr = insert_list_iter.GetFullExpression().toLowerCase();
+				String select_expr = select_list_iter.GetExpressionPrefix();
+
+				mappings.put(column_expr.trim(), select_expr.trim());
+
+				insert_list_iter.Next();
+				select_list_iter.Next();
+			}
+
+			// re-construct the definitions to explicitly match table structure
+			List<String> definition_sql = new ArrayList<String>();
+			for (String mf : metaFields) {
+				if (mappings.containsKey(mf)) {
+					definition_sql.add(mappings.get(mf));
+				} else {
+					definition_sql.add("NULL");
+				}
+			}
+			String all_select_sql = String.join(",\r\n", definition_sql);
+			return all_select_sql;
+		}
+
+		private static String sparkInsertGetSelectMappings(List<String> metaFields, MatchedPattern insert_match) {
+
+			CommaListIterator insert_list_iter = new CommaListIterator(insert_match.variableToValue.get("@@columns"), CommaListIterator.ListType.WITH_COLUMNS);
+
+			List<String> column_names = new ArrayList<>();
+
+			// Iterates the given insert column list
+			while (!insert_list_iter.IsDone()) {
+				final String column_expr = insert_list_iter.GetFullExpression().toLowerCase();
+				column_names.add(column_expr.trim());
+				insert_list_iter.Next();
+			}
+
+			// re-construct the definitions to explicitly match table structure
+			List<String> definition_sql = new ArrayList<String>();
+			for (String mf : metaFields) {
+				if (column_names.contains(mf)) {
+					definition_sql.add(column_names.get(column_names.indexOf(mf)));
+				} else {
+					definition_sql.add("NULL AS " + mf);
+				}
+			}
+
+			return String.join(",\r\n", definition_sql);
+		}
+
+	/**
+	 * Handles insert into commands by checking table metadata
+	 * then writes a create delta table syntax for Spark.
+	 * This is necessary due to limitation in Spark that prevents inserts without the full table specification from working.
+	 * Needed by Atlas for cohort logic.
+	 *
+	 * @param sql - the query to translate
+	 * @param connectionString - a JDBC connection string
+	 * @return the query after translation
+	 */
+	public static String sparkHandleInsert(String sql, String connectionString) throws SQLException {
+		Connection connection = DriverManager.getConnection(connectionString);
+		return sparkHandleInsert(sql, connection);
+	}
+
+	/**
+	 * Handles insert into commands by checking table metadata
+	 * then writes a create delta table syntax for Spark.
+	 * This is necessary due to limitation in Spark that prevents inserts without the full table specification from working.
+	 * Needed by Atlas for cohort logic.
+	 *
+	 * @param sql - the query to translate
+	 * @param connection - a Java connection object
+	 * @return the query after translation
+	 */
+	public static String sparkHandleInsert(String sql, Connection connection) throws SQLException {
+
+		List<String> splits = new ArrayList<String>(Arrays.asList(SqlSplit.splitSql(sql)));
+
+		for (int i = 0; i < splits.size(); i++) {
+			splits.set(i, sparkInsert(splits.get(i), connection));
+		}
+
+		splits.removeAll(Arrays.asList("", null));
+		if (splits.size() > 1 || sql.trim().endsWith(";")) {
+			sql = String.join(";\r\n", splits).trim() + ";";
+		} else {
+			sql = String.join(";\r\n", splits).trim();
+		}
+
+		return sql;
+	}
+
+	private static String sparkInsert(String sql, Connection connection) throws SQLException {
+		sql = sql.trim().replaceAll("\t", " ").replaceAll(" +", " ");
+
+		if (!sql.trim().endsWith(";")) {
+			sql += ";";
+		}
+
+		String this_pattern = "INSERT INTO @@target (@@columns) VALUES (@@remainder);";
+		List<Block> insert_pattern = SqlTranslate.parseSearchPattern(this_pattern);
+		MatchedPattern insert_match = SqlTranslate.search(sql, insert_pattern, 0);
+
+		String target_table = insert_match.variableToValue.get("@@target");
+		String columns = insert_match.variableToValue.get("@@columns");
+		String remainder = insert_match.variableToValue.get("@@remainder");
+
+		if (target_table != null
+				&& columns != null
+				&& remainder != null) {
+
+			target_table = target_table.replaceAll("\r\n", "");
+
+			List<String> metaFields;
+			try {
+				metaFields = getMetaFields(target_table, connection);
+			} catch (SQLException e) {
+				return sql;
+			}
+
+			String mappings = sparkInsertGetValueMappings(insert_match, metaFields);
+
+			sql = "INSERT INTO " + target_table + "\r\n" + "VALUES\r\n" +
+					"(" + mappings + ")";
+
+			return sql.replaceAll(";", "");
+		}
+
+		this_pattern = "INSERT INTO @@target (@@columns) @@remainder;";
+		insert_pattern = SqlTranslate.parseSearchPattern(this_pattern);
+		insert_match = SqlTranslate.search(sql, insert_pattern, 0);
+
+		target_table = insert_match.variableToValue.get("@@target");
+		remainder = insert_match.variableToValue.get("@@remainder");
+		columns = insert_match.variableToValue.get("@@columns");
+
+		if ((target_table != null) &&
+				(remainder != null) &&
+				(columns != null)) {
+
+			// attempt to get table metadata
+			List<String> metaFields;
+			try {
+				metaFields = getMetaFields(target_table, connection);
+			} catch (SQLException e) {
+				return sql;
+			}
+
+			String mappings = sparkInsertGetSelectMappings(metaFields, insert_match);
+
+			sql = "with cte_wrapper (" + columns + ")\r\n as \r\n (\r\n" + remainder + "\r\n) \r\n" +
+					"INSERT INTO " + target_table + "\r\n select " + mappings + "\r\nfrom cte_wrapper";
+		}
+
+		return sql.replaceAll(";", "");
+
+	}
+
+	/**
+	 * spark specific operations
+	 *
+	 * @param sql - the query to translate
+	 * @return the query after translation
+	 * @throws SQLException
+	 */
+	public static String translateSpark(String sql) {
+		String[] splits = SqlSplit.splitSql(sql);
+
+		// translate create table statements
+		for (int i = 0; i < splits.length; i++) {
+			splits[i] = sparkCreateTable(splits[i]);
+		}
+
+		// if this is a batch command or the SQL originally ended with a semicolon
+		// ensure the semicolon is back in the SQL
+
+		if (splits.length > 1 || sql.trim().endsWith(";")) {
+			sql = String.join(";\r\n", splits).trim() + ";";
+		} else {
+			sql = String.join(";\r\n", splits).trim();
+		}
 		return sql;
 	}
 }

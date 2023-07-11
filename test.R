@@ -1,5 +1,5 @@
 library("devtools")
-build()
+build(args=c('--no-build-vignettes'))
 install()
 library("testthat")
 
