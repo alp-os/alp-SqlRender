@@ -1394,3 +1394,4 @@ hana,"CONCAT(@a, @b, @c)","CONCAT(@a, CONCAT(@b, @c))"
 hana,"CONCAT(@a, @b)","@a || @b"
 hana,EOMONTH(@date),LAST_DAY(@date)
 hana,"CHARINDEX(@a,@b)","LOCATE(@b,@a)"
+hana,"FLOOR(@a)","CAST(FLOOR(@a) AS INTEGER)"
