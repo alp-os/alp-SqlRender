@@ -40,3 +40,13 @@ testthat::test_that("OHDSI COHORT_GENERATOR SQL", {
     expect_equal_ignore_spaces(sql, "-- STATISTICS not supported on tempoary tables")
     })
 })
+
+testthat::test_that("OHDSI COHORT DIAGNOSTICS SQL", {
+  suppressWarnings({
+    sql <- SqlRender::translate(sql = "DROP TABLE IF EXISTS #Temp;", targetDialect = "hana")
+    expect_equal_ignore_spaces(sql, "DO BEGIN IF EXISTS (SELECT * FROM (SELECT SCHEMA_NAME || '.' || TABLE_NAME AS combined_name, SCHEMA_NAME, TABLE_NAME FROM tables) WHERE combined_name=UPPER('#Temp')) THEN DROP TABLE #Temp; END IF; END;")
+
+     sql <- SqlRender::translate(sql = "LEN(DIAGNOSTICS)", targetDialect = "hana")
+    expect_equal_ignore_spaces(sql, "LENGTH(DIAGNOSTICS)")
+    })
+})
