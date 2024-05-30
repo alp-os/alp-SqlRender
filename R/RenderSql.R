@@ -89,6 +89,7 @@ render <- function(sql, warnOnMissingParameters = TRUE, ...) {
     }
   }
   translatedSql <- rJava::J("org.ohdsi.sql.SqlRender")$renderSql(as.character(sql), rJava::.jarray(names(parameters)), rJava::.jarray(as.character(parameters)))
+  attributes(translatedSql) <- attributes(sql)
   return(translatedSql)
 }
 
@@ -184,7 +185,8 @@ translate <- function(sql,
   for (message in messages) {
     warn(message)
   }
-  translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSql(as.character(sql), "sql server", as.character(targetDialect), rJava::.jnull(), tempEmulationSchema)
+  translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSqlWithPath(as.character(sql), as.character(targetDialect), rJava::.jnull(), tempEmulationSchema, as.character(pathToReplacementPatterns))
+  attributes(translatedSql) <- attributes(sql)
   attr(translatedSql, "sqlDialect") <-targetDialect
   return(translatedSql)
 }
@@ -278,6 +280,7 @@ translateSingleStatement <- function(sql = "",
     warn(message)
   }
   translatedSql <- rJava::J("org.ohdsi.sql.SqlTranslate")$translateSingleStatementSqlWithPath(as.character(sql), as.character(targetDialect), rJava::.jnull(), tempEmulationSchema, as.character(pathToReplacementPatterns))
+  attributes(translatedSql) <- attributes(sql)
   attr(translatedSql, "sqlDialect") <-targetDialect
   return(translatedSql)
 }
