@@ -562,33 +562,30 @@ public class SqlTranslate {
 			if (targetToReplacementPatterns == null) { // Could have been loaded before acquiring the lock
 				try {
 					InputStream inputStream;
-					if (pathToReplacementPatterns == null) {
+					if (pathToReplacementPatterns == null) // Use CSV file in JAR
 						inputStream = SqlTranslate.class.getResourceAsStream("/inst/csv/replacementPatterns.csv");
-					}
-					else {
-						inputStream = SqlTranslate.class.getResourceAsStream(pathToReplacementPatterns);
-					}
-					final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
-					SqlTranslate.targetToReplacementPatterns = new HashMap<String, List<String[]>>();
-					boolean first = true;
+					else
+						inputStream = new FileInputStream(pathToReplacementPatterns);
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+					targetToReplacementPatterns = new HashMap<String, List<String[]>>();
 					String line;
+					boolean first = true;
 					while ((line = bufferedReader.readLine()) != null) {
-						if (first) {
+						if (first) { // Skip first line
 							first = false;
+							continue;
 						}
-						else {
-							final List<String> row = line2columns(line);
-							final String target = row.get(0);
-							List<String[]> replacementPatterns = SqlTranslate.targetToReplacementPatterns.get(target);
-							if (replacementPatterns == null) {
-								replacementPatterns = new ArrayList<String[]>();
-								SqlTranslate.targetToReplacementPatterns.put(target, replacementPatterns);
-							}
-							replacementPatterns.add(new String[] { row.get(1).replaceAll("@", "@@"), row.get(2).replaceAll("@", "@@") });
+						List<String> row = line2columns(line);
+						String target = row.get(0);
+						List<String[]> replacementPatterns = targetToReplacementPatterns.get(target);
+						if (replacementPatterns == null) {
+							replacementPatterns = new ArrayList<String[]>();
+							targetToReplacementPatterns.put(target, replacementPatterns);
 						}
+						replacementPatterns.add(
+								new String[] { row.get(1).replaceAll("@", "@@"), row.get(2).replaceAll("@", "@@") });
 					}
-				}
-				catch (UnsupportedEncodingException e) {
+				} catch (UnsupportedEncodingException e) {
 					System.err.println("Computer does not support UTF-8 encoding");
 					e.printStackTrace();
 				} catch (IOException e) {
